@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>YouTube Settings</title>
+<style>
+  :root {
+    --bg: #0f0f0f; --panel: #181818; --line: #262626; --text: #f1f1f1; --muted: #9a9a9a;
+    --accent: #ff0033; --ok: #3ddc84; --warn: #ffb020;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  main { padding: 20px 22px 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 13px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 16px; margin-bottom: 14px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 2px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--line); }
+  label.row { cursor: pointer; }
+  h2 + .row { border-top: 0; }
+  .row small { display: block; color: var(--muted); font-size: 12px; }
+  input[type=checkbox] { appearance: none; width: 38px; height: 22px; border-radius: 11px; background: #444; position: relative; flex: none; cursor: pointer; transition: background .15s; margin: 0; }
+  input[type=checkbox]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+  input[type=checkbox]:checked { background: var(--accent); }
+  input[type=checkbox]:checked::after { left: 19px; }
+  input[type=checkbox]:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  select { background: #0b0b0b; color: var(--text); border: 1px solid #333; border-radius: 6px; padding: 6px 8px; font: inherit; flex: none; }
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; padding: 0 0 12px; }
+  .cats label { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; font-size: 13px; }
+  .cats input { appearance: auto; width: 15px; height: 15px; accent-color: var(--accent); }
+  .cats input::after { display: none; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  .field { padding: 11px 0; border-top: 1px solid var(--line); }
+  .field input[type=text] { width: 100%; margin-top: 6px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #0b0b0b; color: var(--text); font: inherit; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); }
+  ol { margin: 6px 0 10px; padding-left: 20px; color: var(--muted); font-size: 13px; }
+  a { color: #8ab4ff; cursor: pointer; }
+  button { background: #272727; color: var(--text); border: 1px solid #383838; padding: 7px 12px; border-radius: 6px; font: inherit; cursor: pointer; }
+  button:hover { background: #313131; }
+  button.green { background: #1ed760; border-color: #1ed760; color: #04210f; font-weight: 600; }
+  button.green:hover { background: #1bc456; }
+  button:disabled { opacity: .7; cursor: default; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 10px 0 12px; font-size: 13px; color: var(--muted); }
+  kbd { font: 12px/1 Consolas, monospace; color: var(--text); background: #262626; border: 1px solid #333; border-bottom-width: 2px; border-radius: 4px; padding: 3px 6px; white-space: nowrap; }
+  .foot { color: var(--muted); font-size: 12px; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>YouTube</h1>
+  <p class="sub">Changes apply right away. Open this any time with the gear button in the top bar or <kbd>Ctrl</kbd> <kbd>,</kbd></p>
+
+  <section>
+    <h2>Ad blocking</h2>
+    <label class="row"><span>Block video ads<small>Removes ads from the player and skips any that get through</small></span><input type="checkbox" data-key="adblock"></label>
+    <label class="row"><span>Block ad and tracker requests<small>EasyList and EasyPrivacy filter lists</small></span><input type="checkbox" data-key="networkBlocking"></label>
+    <label class="row"><span>Hide sponsored cards<small>Ads in the home feed, search results and next to videos</small></span><input type="checkbox" data-key="hideFeedAds"></label>
+    <label class="row"><span>Hide Premium upsells<small>Banners and pop-ups asking you to subscribe</small></span><input type="checkbox" data-key="hideUpsells"></label>
+  </section>
+
+  <section>
+    <h2>SponsorBlock</h2>
+    <label class="row"><span>Skip sponsor segments<small>Community-submitted segments from <a id="sblink">SponsorBlock</a>. You can undo each skip.</small></span><input type="checkbox" data-key="sponsorBlock"></label>
+    <div class="cats" id="cats"></div>
+    <label class="row"><span>Show segments on the progress bar<small>Coloured marks where the skips are</small></span><input type="checkbox" data-key="sponsorBarMarkers"></label>
+  </section>
+
+  <section>
+    <h2>Dislikes</h2>
+    <label class="row"><span>Show dislike counts<small>Estimates from <a id="rydlink">Return YouTube Dislike</a>, with a like ratio bar</small></span><input type="checkbox" data-key="dislikes"></label>
+  </section>
+
+  <section>
+    <h2>Watching</h2>
+    <div class="row"><span>Video quality<small>Used for every video you open</small></span>
+      <select data-select="quality">
+        <option value="auto">Auto (YouTube decides)</option>
+        <option value="highest">Highest available</option>
+        <option value="2160">Up to 4K</option>
+        <option value="1440">Up to 1440p</option>
+        <option value="1080">Up to 1080p</option>
+        <option value="720">Up to 720p</option>
+        <option value="480">Up to 480p</option>
+      </select>
+    </div>
+    <label class="row"><span>Remember playback speed<small>The speed you pick carries over to the next video</small></span><input type="checkbox" data-key="rememberSpeed"></label>
+    <label class="row"><span>Open videos in theater mode<small>The wider player, without going full screen</small></span><input type="checkbox" data-key="theaterMode"></label>
+    <label class="row"><span>Hide end-screen cards<small>The video tiles that cover the last seconds</small></span><input type="checkbox" data-key="hideEndCards"></label>
+    <label class="row"><span>Never ask "Continue watching?"<small>Long playlists and music keep going</small></span><input type="checkbox" data-key="noAfkPause"></label>
+    <label class="row"><span>Keep playing when minimized<small>Also when the window is behind other windows</small></span><input type="checkbox" data-key="backgroundPlay"></label>
+  </section>
+
+  <section>
+    <h2>Shorts and links</h2>
+    <label class="row"><span>Hide Shorts<small>Removes Shorts shelves and the Shorts tab</small></span><input type="checkbox" data-key="hideShorts"></label>
+    <label class="row"><span>Open Shorts as normal videos<small>With the full player: seek bar, speed and quality</small></span><input type="checkbox" data-key="shortsAsVideos"></label>
+    <label class="row"><span>Clean share links<small>Removes the "si=" tracking code that links back to your account</small></span><input type="checkbox" data-key="cleanShareLinks"></label>
+  </section>
+
+  <section>
+    <h2>Discord status</h2>
+    <label class="row"><span>Show what I'm watching<small><span class="status"><span class="dot" id="dot"></span><span id="dstatus">…</span></span></small></span><input type="checkbox" data-key="discord"></label>
+    <div class="field">
+      <div>Discord Application ID</div>
+      <ol>
+        <li>Open the <a id="devportal">Discord Developer Portal</a> and click <b>New Application</b>.</li>
+        <li>Name it <b>YouTube</b>. That name shows as "Watching YouTube".</li>
+        <li>Copy the <b>Application ID</b> and paste it here.</li>
+      </ol>
+      <input type="text" id="clientId" placeholder="e.g. 1234567890123456789" spellcheck="false">
+    </div>
+    <label class="row"><span>Hide when paused<small>Off: your status shows the video with "(Paused)"</small></span><input type="checkbox" data-key="discordHidePaused"></label>
+    <label class="row"><span>"Watch on YouTube" button<small>Others can click it to open the video</small></span><input type="checkbox" data-key="discordShowButton"></label>
+  </section>
+
+  <section>
+    <h2>Window</h2>
+    <label class="row"><span>Close to tray<small>The X button hides the window instead of quitting</small></span><input type="checkbox" data-key="closeToTray"></label>
+    <div class="keys">
+      <kbd>Ctrl ,</kbd><span>These settings</span>
+      <kbd>Ctrl Shift P</kbd><span>Picture in picture (also the button in the player)</span>
+      <kbd>Alt ←</kbd><span>Back</span>
+      <kbd>F5</kbd><span>Reload</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Updates</h2>
+    <div class="row" style="border-top:0">
+      <span><span id="upver">Version …</span><small id="upstatus"></small></span>
+      <span style="display:flex; gap:8px">
+        <button id="upcheck">Check for updates</button>
+        <button id="upinstall" class="green" hidden>Update</button>
+      </span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Account</h2>
+    <div class="field" style="border-top:0">
+      <div>Sign in with Firefox</div>
+      <ol>
+        <li>Make sure you're signed in at youtube.com in Firefox.</li>
+        <li>Click below. Your Firefox sign-in is copied into this app, and nothing leaves this PC.</li>
+      </ol>
+      <button id="ffsignin">Sign in with Firefox</button>
+      <span id="ffresult" class="status" style="margin-left:8px"></span>
+    </div>
+    <div class="field">
+      <button id="clear">Sign out and clear app data</button>
+    </div>
+  </section>
+  <p class="foot" id="ver"></p>
+</main>
+<script>
+  const CATS = [
+    ['sponsor', 'Sponsors', '#00d400'],
+    ['selfpromo', 'Self-promotion', '#ffff00'],
+    ['interaction', 'Subscribe reminders', '#cc00ff'],
+    ['intro', 'Intros', '#00ffff'],
+    ['outro', 'Credits and end cards', '#0202ed'],
+    ['preview', 'Previews and recaps', '#008fd6'],
+    ['hook', 'Hooks and greetings', '#395699'],
+    ['filler', 'Tangents and jokes', '#7300ff'],
+    ['music_offtopic', 'Non-music in music videos', '#ff9900'],
+  ];
+  const catBox = document.getElementById('cats');
+  for (const [key, label, color] of CATS) {
+    const l = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.cat = key;
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = color;
+    l.append(cb, sw, document.createTextNode(label));
+    catBox.appendChild(l);
+  }
+
+  const STATUS = {
+    'connected': ['Connected to Discord', 'ok'],
+    'off': ['Off', ''],
+    'connecting': ['Connecting…', 'warn'],
+    'no-client-id': ['Paste an Application ID below', 'warn'],
+    'bad-client-id': ['Discord rejected that Application ID', 'warn'],
+    'discord-not-running': ['Waiting for Discord to open…', 'warn'],
+    'closed': ['Reconnecting…', 'warn'],
+  };
+  let current = null;
+  function render({ config, discordStatus, version }) {
+    current = config;
+    document.querySelectorAll('input[data-key]').forEach((el) => { el.checked = !!config[el.dataset.key]; });
+    document.querySelectorAll('select[data-select]').forEach((el) => { if (document.activeElement !== el) el.value = String(config[el.dataset.select]); });
+    const cats = config.sponsorCategories || [];
+    document.querySelectorAll('input[data-cat]').forEach((el) => { el.checked = cats.includes(el.dataset.cat); el.disabled = !config.sponsorBlock; });
+    const ci = document.getElementById('clientId');
+    if (document.activeElement !== ci) ci.value = config.discordClientId || '';
+    const [text, cls] = STATUS[discordStatus] || [discordStatus, ''];
+    document.getElementById('dstatus').textContent = text;
+    document.getElementById('dot').className = 'dot ' + cls;
+    if (version) document.getElementById('ver').textContent = 'YouTube ' + version;
+  }
+  async function refresh() { render(await tunebox.get()); }
+  document.querySelectorAll('input[data-key]').forEach((el) => {
+    el.addEventListener('change', async () => {
+      render(await tunebox.set({ [el.dataset.key]: el.checked }));
+      setTimeout(refresh, 600);
+    });
+  });
+  document.querySelectorAll('select[data-select]').forEach((el) => {
+    el.addEventListener('change', async () => render(await tunebox.set({ [el.dataset.select]: el.value })));
+  });
+  catBox.addEventListener('change', async () => {
+    const cats = [...document.querySelectorAll('input[data-cat]:checked')].map((el) => el.dataset.cat);
+    render(await tunebox.set({ sponsorCategories: cats }));
+  });
+  let t;
+  document.getElementById('clientId').addEventListener('input', (e) => {
+    clearTimeout(t);
+    const v = e.target.value.replace(/\D/g, '');
+    t = setTimeout(async () => { await tunebox.set({ discordClientId: v }); setTimeout(refresh, 1500); }, 500);
+  });
+  document.getElementById('devportal').addEventListener('click', () => tunebox.openExternal('https://discord.com/developers/applications'));
+  document.getElementById('sblink').addEventListener('click', (e) => { e.preventDefault(); tunebox.openExternal('https://sponsor.ajay.app/'); });
+  document.getElementById('rydlink').addEventListener('click', (e) => { e.preventDefault(); tunebox.openExternal('https://returnyoutubedislike.com/'); });
+  function renderUpdate(s) {
+    if (!s) return;
+    document.getElementById('upver').textContent = 'Version ' + s.current;
+    const text = {
+      dev: 'Updates are checked in the installed app only',
+      idle: '', checking: 'Checking…', latest: 'You\'re up to date',
+      available: 'Version ' + s.version + ' is available',
+      downloading: 'Downloading… ' + (s.percent || 0) + '%',
+      ready: 'Version ' + s.version + ' is ready to install',
+      error: 'Couldn\'t update: ' + (s.error || 'unknown error'),
+    }[s.status] || '';
+    document.getElementById('upstatus').textContent = text;
+    const btn = document.getElementById('upinstall');
+    const show = ['available', 'downloading', 'ready'].includes(s.status) || (s.status === 'error' && s.version);
+    btn.hidden = !show;
+    btn.disabled = s.status === 'downloading';
+    btn.textContent = s.status === 'downloading' ? 'Updating… ' + (s.percent || 0) + '%'
+      : s.status === 'ready' ? 'Restart to update'
+      : s.status === 'error' ? 'Retry update' : 'Update to ' + s.version;
+    document.getElementById('upcheck').disabled = ['checking', 'downloading'].includes(s.status);
+  }
+  tunebox.onUpdate(renderUpdate);
+  tunebox.updateGet().then(renderUpdate);
+  document.getElementById('upcheck').addEventListener('click', async () => renderUpdate(await tunebox.updateCheck()));
+  document.getElementById('upinstall').addEventListener('click', () => tunebox.updateInstall());
+
+  document.getElementById('ffsignin').addEventListener('click', async () => {
+    const out = document.getElementById('ffresult');
+    out.textContent = 'Signing in…';
+    const res = await tunebox.firefoxSignIn();
+    out.textContent = res && res.ok ? 'Signed in ✓' : '';
+  });
+  document.getElementById('clear').addEventListener('click', async () => {
+    if (confirm('Sign out of YouTube and clear all app data?')) await tunebox.clearData();
+  });
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>

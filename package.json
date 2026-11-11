@@ -1,0 +1,44 @@
+{
+  "name": "ranch-youtube",
+  "productName": "YouTube",
+  "version": "1.0.0",
+  "description": "Ad-free YouTube desktop app with SponsorBlock, dislike counts and Discord status",
+  "main": "src/main.js",
+  "author": "KingCreeper531",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1"
+  },
+  "repository": "https://github.com/KingCreeper531/youtube-desktop",
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "local.ranch.youtube",
+    "productName": "YouTube",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "build/icon.png", "package.json"],
+    "publish": [
+      { "provider": "github", "owner": "KingCreeper531", "repo": "youtube-desktop", "releaseType": "release" }
+    ],
+    "win": { "target": ["nsis", "portable"], "icon": "build/icon.ico" },
+    "portable": { "artifactName": "YouTube-Portable-${version}.${ext}" },
+    "nsis": {
+      "artifactName": "YouTube-Setup-${version}.${ext}",
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YouTube",
+      "runAfterFinish": true
+    }
+  }
+}
