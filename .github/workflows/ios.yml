@@ -1,0 +1,62 @@
+# Builds the unsigned iPhone app (.ipa) on GitHub's Mac machines and attaches it
+# to the release. Install it with AltStore or Sideloadly using your Apple ID.
+name: iOS build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the .ipa to (for example v1.0.1). Leave empty to only build.
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A release builds its own tag; a manual run builds the current code
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build
+        working-directory: ios
+        run: |
+          VERSION=$(node -p "require('../package.json').version")
+          IFS=. read -r MAJ MIN PAT <<< "$VERSION"
+          BUILD=$((MAJ * 10000 + MIN * 100 + PAT))
+          xcodebuild -project RanchYouTube.xcodeproj -target RanchYouTube \
+            -configuration Release -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -n 40
+          test -d build/Release-iphoneos/RanchYouTube.app
+          rm -rf Payload && mkdir Payload
+          cp -R build/Release-iphoneos/RanchYouTube.app Payload/
+          IPA="YouTube-iOS-$VERSION.ipa"
+          zip -qry "$IPA" Payload
+          echo "IPA=ios/$IPA" >> "$GITHUB_ENV"
+          ls -la "$IPA"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa
+          path: ${{ env.IPA }}
+
+      - name: Attach to the release
+        if: github.event_name == 'release' || inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name || inputs.tag }}" "$IPA" --clobber
