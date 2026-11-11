@@ -202,7 +202,13 @@ async function setupNetworkBlocking(ses) {
       read: fs.promises.readFile,
       write: fs.promises.writeFile,
     });
-    if (config.get('networkBlocking')) blocker.enableBlockingInSession(ses);
+    // Only block requests. The library's own page scripts clash with this app's ad
+    // removal on YouTube (they wrap the same functions until the page overflows and
+    // the player never starts), and the app already handles what they would do.
+    ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+      if (!config.get('networkBlocking') || details.resourceType === 'mainFrame') return callback({});
+      try { blocker.onBeforeRequest(details, callback); } catch { callback({}); }
+    });
     let count = 0;
     blocker.on('request-blocked', () => { count++; });
     setInterval(() => { if (count) log(`Network blocker: ${count} requests blocked so far`); }, 5 * 60 * 1000);
@@ -247,7 +253,8 @@ function createWindow() {
   });
   win.setMenuBarVisibility(false);
   if (cfg.maximized) win.maximize();
-  win.once('ready-to-show', () => win.show());
+  // Test copies (RANCHYT_HIDDEN) stay hidden so they never pop up over what you're doing
+  if (!process.env.RANCHYT_HIDDEN) win.once('ready-to-show', () => win.show());
 
   // Use the video title for the window title, without YouTube's notification count
   win.on('page-title-updated', (e, title) => {
@@ -302,19 +309,23 @@ function createWindow() {
     else shell.openExternal(url);
     return { action: 'deny' };
   });
-  const toSignIn = (e, url) => {
-    // YouTube quietly checks sign-in status ("passive") and bounces straight back; let those through
-    if (isGoogleAccounts(url) && !/[?&]passive=(true|1)\b/.test(url)) {
-      e.preventDefault();
-      log(`Sign-in requested: ${url.split('?')[0]}`);
-      promptSignIn(url);
-      return true;
-    }
-    return false;
+  // Clicking "Sign in" (a link to Google) always offers the browser sign-in, like YouTube Music.
+  // YouTube also checks sign-in quietly in the background ("passive" redirects that bounce
+  // straight back); let those through so no prompt pops up on its own.
+  let lastPrompt = 0;
+  const toSignIn = (e, url, clicked) => {
+    if (!isGoogleAccounts(url)) return false;
+    if (!clicked && /[?&]passive=(true|1)\b/.test(url)) return false;
+    e.preventDefault();
+    if (!clicked && Date.now() - lastPrompt < 30000) return true; // a redirect loop: don't stack dialogs
+    lastPrompt = Date.now();
+    log(`Sign-in requested: ${url.split('?')[0]}`);
+    promptSignIn(url);
+    return true;
   };
-  win.webContents.on('will-redirect', (e, url) => { toSignIn(e, url); });
+  win.webContents.on('will-redirect', (e, url) => { toSignIn(e, url, false); });
   win.webContents.on('will-navigate', (e, url) => {
-    if (toSignIn(e, url)) return;
+    if (toSignIn(e, url, true)) return;
     if (!internal(url)) {
       e.preventDefault();
       shell.openExternal(url);
@@ -573,11 +584,7 @@ config.onChange((cfg, before) => {
   if (cfg.discordHidePaused !== before.discordHidePaused || cfg.discordShowButton !== before.discordShowButton) {
     discord.setActivity(buildActivity(nowPlaying));
   }
-  if (cfg.networkBlocking !== before.networkBlocking && blocker) {
-    const ses = session.fromPartition(PARTITION);
-    if (cfg.networkBlocking && !blocker.isBlockingEnabled(ses)) blocker.enableBlockingInSession(ses);
-    if (!cfg.networkBlocking && blocker.isBlockingEnabled(ses)) blocker.disableBlockingInSession(ses);
-  }
+  // (networkBlocking is read on every request, so turning it on or off needs nothing here)
   if (PAGE_KEYS.some((k) => JSON.stringify(cfg[k]) !== JSON.stringify(before[k]))) {
     sbCache.clear();
     win?.webContents.send('yt:config', pageConfig(cfg));
@@ -596,7 +603,7 @@ app.whenReady().then(async () => {
   setupSignInHeaders(ses);
   await setupNetworkBlocking(ses);
   createWindow();
-  createTray();
+  if (!process.env.RANCHYT_HIDDEN) createTray();
 
   discord.setClientId(config.get('discordClientId'));
   discord.setEnabled(config.get('discord'));

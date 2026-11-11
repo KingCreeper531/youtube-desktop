@@ -1,0 +1,97 @@
+import groovy.json.JsonSlurper
+
+plugins {
+    id 'com.android.application'
+}
+
+// ---------------------------------------------------------------- this app
+// Everything that makes this Android app YouTube. The Java code is the shared Ranch web-app shell.
+def site = [
+    name      : 'YouTube',
+    appId     : 'io.github.kingcreeper531.youtube',
+    home      : 'https://m.youtube.com/',
+    hosts     : 'youtube.com,youtu.be,google.com,gstatic.com,googleusercontent.com,youtube-nocookie.com,ggpht.com,ytimg.com',
+    repo      : 'KingCreeper531/youtube-desktop',
+    background: '#0f0f0f',
+]
+
+// One version number for every platform: read it from package.json
+def pkg = new JsonSlurper().parse(rootProject.file('../package.json'))
+def appVersion = pkg.version as String
+def (major, minor, patch) = appVersion.tokenize('.').collect { it.replaceAll(/\D.*/, '') as int }
+
+// Same release key as the other Ranch apps (see ~/.gradle/gradle.properties).
+def hasReleaseKey = project.hasProperty('YTM_KEYSTORE') && file(project.property('YTM_KEYSTORE')).exists()
+
+// The page script is shared with the iPhone app (ios/Web/inject.js)
+def generatedAssets = layout.buildDirectory.dir('generated/ranch-assets')
+def copyPageScript = tasks.register('copyPageScript', Sync) {
+    from(rootProject.file('../ios/Web/inject.js'))
+    into generatedAssets
+}
+
+android {
+    namespace 'io.github.kingcreeper531.ranchweb'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId site.appId
+        minSdk 26
+        targetSdk 35
+        versionCode major * 10000 + minor * 100 + patch
+        versionName appVersion
+        buildConfigField 'String', 'SITE_NAME', "\"${site.name}\""
+        buildConfigField 'String', 'SITE_HOME', "\"${site.home}\""
+        buildConfigField 'String', 'SITE_HOSTS', "\"${site.hosts}\""
+        buildConfigField 'String', 'SITE_BACKGROUND', "\"${site.background}\""
+        buildConfigField 'String', 'GITHUB_REPO', "\"${site.repo}\""
+        resValue 'string', 'app_name', site.name
+        resValue 'color', 'app_background', site.background
+    }
+
+    sourceSets {
+        main.assets.srcDirs += generatedAssets.get().asFile
+    }
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(project.property('YTM_KEYSTORE'))
+                storePassword project.property('YTM_KEYSTORE_PASSWORD')
+                keyAlias project.property('YTM_KEY_ALIAS')
+                keyPassword project.property('YTM_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+        resValues true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "${site.name}-Android-${appVersion}.apk"
+        }
+    }
+}
+
+tasks.named('preBuild') { dependsOn copyPageScript }
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach { dependsOn copyPageScript }
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core:1.13.1'
+}

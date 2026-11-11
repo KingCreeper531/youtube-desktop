@@ -1,6 +1,6 @@
 # YouTube Desktop
 
-An unofficial Windows desktop app for [YouTube](https://www.youtube.com), part of the Ranch apps. Install and update it yourself, or through the [Ranch Launcher](https://github.com/KingCreeper531/ranch-launcher).
+An unofficial app for [YouTube] on Windows, Android and iPhone(https://www.youtube.com), part of the Ranch apps. Install and update it yourself, or through the [Ranch Launcher](https://github.com/KingCreeper531/ranch-launcher).
 
 ## Features
 
@@ -26,6 +26,8 @@ Get the latest release from the [Releases page](https://github.com/KingCreeper53
 
 - `YouTube-Setup-x.y.z.exe`: installer (recommended). It updates itself.
 - `YouTube-Portable-x.y.z.exe`: runs without installing.
+- `YouTube-Android-x.y.z.apk`: Android app (Android 8 or newer) with ad blocking, SponsorBlock, dislike counts and background play. Open it on your phone to install.
+- `YouTube-iOS-x.y.z.ipa`: iPhone and iPad app. It's unsigned, so install it with [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io) using your Apple ID.
 
 Windows SmartScreen may warn about the app because it isn't code-signed. Click **More info**, then **Run anyway**.
 
