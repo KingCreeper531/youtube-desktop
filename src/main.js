@@ -126,16 +126,23 @@ async function signInWithFirefox() {
     return { ok: true };
   }
   log(`Firefox sign-in import failed: ${res.reason}`);
-  await dialog.showMessageBox(win || undefined, {
+  const msg = {
+    'no-firefox': ['Firefox isn\'t installed on this PC.',
+      'Google doesn\'t allow signing in inside apps, so this app borrows your sign-in from Firefox (or Zen, LibreWolf, Waterfox or Floorp).\n\nInstall Firefox from firefox.com, sign in at youtube.com there, then click "Sign in with Firefox" again. You can also try "Try Google sign-in page".'],
+    'not-signed-in': ['Firefox isn\'t signed in to YouTube.',
+      'Open youtube.com in Firefox, sign in there, then click "Sign in with Firefox" again.\n\nKeep Firefox signed in afterwards: signing out of YouTube in Firefox signs this app out too.'],
+  }[res.reason] || ['Couldn\'t read your Firefox sign-in.', `Close Firefox and try again.\n\nDetails: ${res.reason}`];
+  const { response } = await dialog.showMessageBox(win || undefined, {
     type: 'info',
     title: APP_NAME,
-    message: res.reason === 'not-signed-in'
-      ? 'Firefox isn\'t signed in to YouTube yet.'
-      : 'Couldn\'t read your Firefox sign-in.',
-    detail: res.reason === 'not-signed-in'
-      ? 'Open youtube.com in Firefox, sign in there, then click "Sign in with Firefox" again.'
-      : `Details: ${res.reason}`,
+    message: msg[0],
+    detail: msg[1],
+    buttons: ['OK', 'Try Google sign-in page'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
   });
+  if (response === 1) openSignIn('https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2F');
   return { ok: false };
 }
 
