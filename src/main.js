@@ -555,7 +555,7 @@ async function getVotes(videoId) {
 // ---------------------------------------------------------------- IPC
 const PAGE_KEYS = [
   'adblock', 'hideFeedAds', 'hideUpsells', 'sponsorBlock', 'sponsorCategories', 'sponsorBarMarkers',
-  'dislikes', 'hideShorts', 'shortsAsVideos', 'quality', 'rememberSpeed', 'theaterMode', 'hideEndCards',
+  'dislikes', 'hideShorts', 'shortsAsVideos', 'oldShortsUi', 'quality', 'rememberSpeed', 'theaterMode', 'hideEndCards',
   'cleanShareLinks', 'noAfkPause', 'backgroundPlay',
 ];
 const pageConfig = (cfg = config.load()) => Object.fromEntries(PAGE_KEYS.map((k) => [k, cfg[k]]));

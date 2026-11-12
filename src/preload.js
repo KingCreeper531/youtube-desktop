@@ -274,6 +274,28 @@ const SHEETS = {
     ytd-video-renderer:has(a[href^="/shorts/"]), ytd-grid-video-renderer:has(a[href^="/shorts/"]),
     ytd-rich-item-renderer:has(a[href^="/shorts/"]), ytd-compact-video-renderer:has(a[href^="/shorts/"]),
     yt-tab-shape[tab-title="Shorts"] { display: none !important; }`,
+  // The old Shorts look: the button column sits on the video's right edge in white, with no circles
+  oldShortsUi: `
+    yt-reel-player-overlay-view-model { position: relative !important; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer {
+      position: absolute !important; top: 0 !important; bottom: 0 !important; right: var(--ranch-shorts-gap, 72px) !important;
+      width: 64px !important; z-index: 4; display: flex !important; flex-direction: column !important;
+      justify-content: flex-end !important; align-items: center !important; padding: 0 0 92px !important; pointer-events: none;
+      background: linear-gradient(to left, rgba(0,0,0,.32), rgba(0,0,0,0)) !important; border-radius: 0 12px 12px 0; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer > * { pointer-events: auto; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer button,
+    .ranch-shorts-dislike .ranch-sd-icon {
+      background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+      color: #fff !important; box-shadow: none !important; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer button:hover { background: rgba(255,255,255,.12) !important; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer yt-icon,
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer svg { color: #fff !important; fill: #fff !important;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.75)); }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer .ytSpecButtonShapeWithLabelLabel,
+    .ranch-shorts-dislike .ranch-sd-label { color: #fff !important; text-shadow: 0 1px 3px rgba(0,0,0,.85); font-weight: 500; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelMetadataContainer {
+      margin-right: var(--ranch-shorts-gap, 72px) !important; padding-right: 60px !important; box-sizing: border-box; }
+    yt-reel-player-overlay-view-model .ytReelPlayerOverlayViewModelActionsContainer [class*="contribYtLightShape"] { display: none !important; }`,
   hideEndCards: `
     .ytp-ce-element, .ytp-cards-teaser, .ytp-cards-button { display: none !important; }`,
 };
@@ -302,6 +324,11 @@ const BASE_CSS = `
   #ranch-update-btn:hover:not(:disabled) { background: #1bc456; }
   #ranch-pip-btn svg { width: 100%; height: 100%; }
   .ranch-dislike-count { margin-left: 6px; }
+  .ranch-shorts-dislike { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 16px 0; cursor: default; }
+  .ranch-shorts-dislike .ranch-sd-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.1); color: #f1f1f1; }
+  .ranch-shorts-dislike .ranch-sd-icon svg { fill: currentColor; }
+  .ranch-shorts-dislike .ranch-sd-label { font: 400 14px/20px Roboto, Arial, sans-serif; color: #f1f1f1; }
 `;
 webFrame.insertCSS(BASE_CSS);
 const sheetKeys = {};
@@ -500,7 +527,60 @@ function dislikeParts() {
   return btn ? { btn, likeBtn, group } : null;
 }
 
+// Shorts: the count goes under YouTube's dislike button, or (when YouTube shows none) in a
+// small dislike count of our own under the like button
+const THUMB_DOWN = 'M17 4H6.27c-.89 0-1.68.6-1.92 1.46l-1.91 6.86A2 2 0 0 0 4.36 15h5.12l-.7 3.5a2 2 0 0 0 .54 1.8l.71.7 5.27-5.32c.38-.38.6-.89.6-1.42V5a1 1 0 0 0-.9-1zm2 0v10h2V4h-2z';
+function visibleShortsBar() {
+  return $$('reel-action-bar-view-model').find((b) => { const r = b.getBoundingClientRect(); return r.height && r.top < innerHeight && r.bottom > 0; }) || null;
+}
+function renderShortsDislikes() {
+  const id = (/^\/shorts\/([\w-]{11})/.exec(location.pathname) || [])[1];
+  if (id) loadVotes(id);
+  const bar = id ? visibleShortsBar() : null;
+  for (const n of $$('.ranch-shorts-dislike')) if (!bar || !bar.contains(n)) n.remove();
+  // The old look moves the buttons onto the video: as far in as the column sat outside it
+  if (bar && cfg.oldShortsUi) {
+    const overlay = bar.closest('yt-reel-player-overlay-view-model');
+    const video = bar.closest('ytd-reel-video-renderer');
+    if (overlay && video) {
+      const gap = Math.max(0, Math.round(overlay.getBoundingClientRect().right - video.getBoundingClientRect().right));
+      if (gap && overlay.style.getPropertyValue('--ranch-shorts-gap') !== `${gap}px`) overlay.style.setProperty('--ranch-shorts-gap', `${gap}px`);
+    }
+  }
+  if (!bar || !cfg.dislikes || !votes || votesFor !== id) return;
+  const btn = bar.querySelector('dislike-button-view-model button');
+  const pressed = !!btn && btn.getAttribute('aria-pressed') === 'true';
+  if (pressedAtLoad === null) pressedAtLoad = pressed;
+  const dislikes = Math.max(0, votes.dislikes + (pressed ? 1 : 0) - (pressedAtLoad ? 1 : 0));
+  const text = compact.format(dislikes);
+  const title = `${dislikes.toLocaleString()} dislikes (estimate from Return YouTube Dislike)`;
+  if (btn) {
+    const label = btn.closest('label') && btn.closest('label').querySelector('.ytSpecButtonShapeWithLabelLabel');
+    if (label && label.textContent !== text) label.textContent = text;
+    btn.title = title;
+    return;
+  }
+  const like = bar.querySelector('like-button-view-model');
+  if (!like) return;
+  let box = bar.querySelector('.ranch-shorts-dislike');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'ranch-shorts-dislike';
+    const icon = document.createElement('div');
+    icon.className = 'ranch-sd-icon';
+    icon.appendChild(svgIcon(THUMB_DOWN, 24));
+    const label = document.createElement('div');
+    label.className = 'ranch-sd-label';
+    box.append(icon, label);
+    like.after(box);
+  }
+  box.title = title;
+  if (box.lastChild.textContent !== text) box.lastChild.textContent = text;
+}
+
 function renderDislikes() {
+  if (location.pathname.startsWith('/shorts/')) { renderShortsDislikes(); return; }
+  for (const n of $$('.ranch-shorts-dislike')) n.remove();
   const parts = location.pathname === '/watch' ? dislikeParts() : null;
   const old = $$('.ranch-dislike-count, .ranch-ryd-bar');
   if (!parts || !cfg.dislikes || !votes) { old.forEach((n) => n.remove()); return; }

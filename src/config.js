@@ -17,6 +17,7 @@ const DEFAULTS = {
   // Quality of life
   hideShorts: false,        // hide Shorts shelves and the Shorts tab
   shortsAsVideos: false,    // open Shorts in the normal player instead of the Shorts feed
+  oldShortsUi: false,       // Shorts buttons in white on top of the video, like the old phone layout
   quality: 'auto',          // auto | highest | 2160 | 1440 | 1080 | 720 | 480
   rememberSpeed: true,      // keep your playback speed for the next video
   theaterMode: false,       // open videos in theater mode
