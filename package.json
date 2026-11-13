@@ -1,7 +1,7 @@
 {
   "name": "ranch-youtube",
   "productName": "YouTube",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Ad-free YouTube desktop app with SponsorBlock, dislike counts and Discord status",
   "main": "src/main.js",
   "author": "KingCreeper531",
